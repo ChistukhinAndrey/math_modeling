@@ -1,18 +1,85 @@
-Kg=1; 
-X0=1;
-XP0=0;
-Y0=0; 
-YP0=1; 
-T0=0; 
-TN=10; 
-dT=0.01; 
-Planet1=@(t,z) [z(2); -Kg*z(1)./(z(1).^2+z(3).^2).^(3/2); z(4); -
-Kg*z(3)./(z(1).^2+z(3).^2).^(3/2)]; 
-[T,Y]=ode45(Planet1,[T0:dT:TN],[X0, XP0, Y0, YP0]); 
-figure('Color',[1 1 1]);
-hL1=plot(Y(:,1),Y(:,3),0,0); grid; 
-set(hL1(1), 'LineWidth', 2, 'Color', 'b');
-set(hL1(2), 'Marker', 'o', 'MarkerSize', 8, 'Color', 'r', 'MarkerFaceColor', 'r' );
-ylabel('\ity','fontsize',14);
-xlabel('\itx','fontsize',14);
-title (sprintf('{\\itx}=%3.1f, {\\ity}=%3.1f, {\\itV}_x=%3.1f, {\\itV}_y=%3.1f ',X0,Y0,XP0,YP0),'fontsize',12);
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+
+from scipy.constants import G
+# Convert Newtonian constant of gravitation from m3.kg-1.s-2 to km3.kg-1.s-2
+G /= 1.e9
+
+# Planet radius, km
+R = 6371
+# Planet mass, kg
+M = 5.9722e24
+
+fac = G * M
+def calc_a(r):
+    """Calculate the acceleration of the rocket due to gravity at position r."""
+    r3 = np.hypot(*r)**3
+    return -fac * r / r3
+
+def get_trajectory(h, launch_speed, launch_angle):
+    """Do the (very simple) numerical integration of the equation of motion.
+
+    The satellite is released at altitude h (km) with speed launch_speed (km/s)
+    at an angle launch_angle (degrees) from the normal to the planet's surface.
+
+    """
+
+    v0 = launch_speed
+    theta = np.radians(launch_angle)
+
+    N = 100000
+    tgrid, dt = np.linspace(0, 15000, N, retstep=True)
+    tr = np.empty((N,2))
+    v = np.empty((N,2))
+    # Initial rocket position, velocity and acceleration
+    tr[0] = 0, R + h
+    v[0] = v0 * np.sin(theta), v0 * np.cos(theta)
+    a = 3
+
+    for i, t in enumerate(tgrid[1:]):
+        # Calculate the rocket's next position based on its instantaneous velocity.
+        r = tr[i] + v[i]*dt
+        if np.hypot(*r) < R:
+            # Our rocket crashed.
+            break
+        # Update the rocket's position, velocity and acceleration.
+        tr[i+1] = r
+        v[i+1] = v[i] + a*dt
+        a = calc_a(tr[i+1])
+
+    return tr[:i+1]
+
+# Rocket initial speed (km.s-1), angle from local vertical (deg)
+launch_speed, launch_angle = 2.92, 90
+# Rocket launch altitute (km)
+h = 200
+tr = get_trajectory(h, launch_speed, launch_angle)
+
+def plot_trajectory(ax, tr):
+    """Plot the trajectory tr on Axes ax."""
+    earth_circle = Circle((0,0), R, facecolor=(0.9,0.9,0.9))
+    ax.set_facecolor('k')
+    ax.add_patch(earth_circle)
+    ax.plot(*tr.T, c='y')
+    # Make sure our planet looks circular!
+    ax.axis('equal')
+
+    # Set Axes limits to trajectory coordinate range, with some padding.
+    xmin, xmax = min(tr.T[0]), max(tr.T[0])
+    ymin, ymax = min(tr.T[1]), max(tr.T[1])
+    dx, dy = xmax - xmin, ymax - ymin
+    PAD = 0.05
+    ax.set_xlim(xmin - PAD*dx, xmax + PAD*dx)
+    ax.set_ylim(ymin - PAD*dy, ymax + PAD*dy)
+
+fig, axes = plt.subplots(nrows=2, ncols=2)
+for i, launch_speed in enumerate([8.8]):
+    tr = get_trajectory(h, launch_speed, launch_angle)
+    ax = axes[i//2,i%2]
+    plot_trajectory(ax, tr)
+    ax.set_title('{} km/s'.format(launch_speed))
+plt.tight_layout()
+
+plt.savefig('orbit.png')
+plt.show()
