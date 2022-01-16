@@ -88,11 +88,11 @@ def plot_trajectory(ax, tr):
     ax.set_ylim(ymin - PAD*dy, ymax + PAD*dy)
 
 
-fig, axes = plt.subplots(nrows=2, ncols=2)
+fig = plt.figure()
+ax = fig.add_subplot(111)
 for i, launch_speed in enumerate([10.7]):
     tr = get_trajectory(h, launch_speed, launch_angle)
-    ax = axes[i//2,i%2]
-    plot_trajectory(ax, tr)
+   plot_trajectory(ax, tr)
     ax.set_title('{} km/s'.format(launch_speed))
 plt.tight_layout()
 

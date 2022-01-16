@@ -7,16 +7,24 @@ from scipy.constants import G
 G /= 1.e9
 
 # Planet radius, km
-R = 6371
+Rearth = 6371
+Rmoon = 1737
 
 # Planet mass, kg
-M = 5.9722e24
+Mearth = 5.9722e24
+Mmoon = 7.36e22
+EMdistance = 3.84e4
+fac = G * Mearth 
+facmoon = G * Mmoon
 
-fac = G * M
 def calc_a(r):
     """Calculate the acceleration of the rocket due to gravity at position r."""
     r3 = np.hypot(*r)**3
     return -fac * r / r3
+def calc_amoon(r):
+    """Calculate the acceleration of the rocket due to gravity at position r."""
+    r3 = np.hypot(*r)**3
+    return -facmoon * r / r3
 
 def get_trajectory(h, launch_speed, launch_angle):
     """Do the (very simple) numerical integration of the equation of motion.
@@ -31,17 +39,20 @@ def get_trajectory(h, launch_speed, launch_angle):
 
     N = 100000
     tgrid, dt = np.linspace(0, 15000, N, retstep=True)
+    # create an array of points of trajectory
     tr = np.empty((N,2))
+    # array of velocity in every point
     v = np.empty((N,2))
     # Initial rocket position, velocity and acceleration
-    tr[0] = 0, R + h
+    tr[0] = 0, Rearth + h
+   
     v[0] = v0 * np.sin(theta), v0 * np.cos(theta)
-    a = 3
+    a = 0
 
     for i, t in enumerate(tgrid[1:]):
         # Calculate the rocket's next position based on its instantaneous velocity.
         r = tr[i] + v[i]*dt
-        if np.hypot(*r) < R:
+        if np.hypot(*r) < Rearth:
             # Our rocket crashed.
             break
         # Update the rocket's position, velocity and acceleration.
@@ -53,15 +64,17 @@ def get_trajectory(h, launch_speed, launch_angle):
 
 # Rocket initial speed (km.s-1), angle from local vertical (deg)
 launch_speed, launch_angle = 2.92, 90
-# Rocket launch altitute (km)
+# Rocket launch altitude (km)
 h = 200
 tr = get_trajectory(h, launch_speed, launch_angle)
 
 def plot_trajectory(ax, tr):
     """Plot the trajectory tr on Axes ax."""
-    earth_circle = Circle((0,0), R, facecolor=(0.9,0.9,0.9))
+    earth_circle = Circle((0,0), Rearth, facecolor=(0.4, 0.4, 0.4))
+    moon_circle = Circle((EMdistance/1.41, -EMdistance/1.41), Rmoon, facecolor=(0.9,0.9,0.9))
     ax.set_facecolor('k')
     ax.add_patch(earth_circle)
+    ax.add_patch(moon_circle)
     ax.plot(*tr.T, c='y')
     # Make sure our planet looks circular!
     ax.axis('equal')
@@ -74,10 +87,11 @@ def plot_trajectory(ax, tr):
     ax.set_xlim(xmin - PAD*dx, xmax + PAD*dx)
     ax.set_ylim(ymin - PAD*dy, ymax + PAD*dy)
 
-fig, axes = plt.subplots(nrows=2, ncols=2)
-for i, launch_speed in enumerate([8.8]):
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+for i, launch_speed in enumerate([10.7]):
     tr = get_trajectory(h, launch_speed, launch_angle)
-    ax = axes[i//2,i%2]
     plot_trajectory(ax, tr)
     ax.set_title('{} km/s'.format(launch_speed))
 plt.tight_layout()
