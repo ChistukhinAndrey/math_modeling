@@ -5,11 +5,9 @@ from matplotlib.patches import Circle
 from scipy.constants import G
 G /= 1.e9
 
-# Planet radius, km
 Rearth = 6371
 Rmoon = 1737
 
-# Planet mass, kg
 Mearth = 5.9722e24
 Mmoon = 7.36e22
 EMdistance = 3.84e4
@@ -43,7 +41,6 @@ def get_trajectory(h, launch_speed, launch_angle):
         if np.hypot(*r) < Rearth:
            
             break
-       
         tr[i+1] = r
         v[i+1] = v[i] + a*dt
         a = calc_a(tr[i+1])
