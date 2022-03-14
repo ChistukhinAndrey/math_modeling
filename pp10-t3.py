@@ -13,6 +13,7 @@ def diff_func(v, x):
   dydt = x
   dxdt = np.sin(x) + np.cos(x)
   return dydt , dxdt
+  
 
 
 
